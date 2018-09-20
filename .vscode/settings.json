@@ -1,0 +1,21 @@
+{
+  "files.exclude": {
+    "__error": "Not found",
+    "Infestation.iws": true,
+    "Infestation.ipr": true,
+    "Infestation.iml": true,
+    "gradlew.bat": true,
+    "gradlew": true,
+    ".project": true,
+    ".gitignore": true,
+    "gradle": true,
+    ".gradle": true,
+    "core/.settings": true,
+    "desktop/.settings": true,
+    "gradle.properties": true,
+    ".settings": true,
+    "build.gradle": true,
+    "settings.gradle": true
+  },
+  "java.configuration.updateBuildConfiguration": "interactive"
+}
