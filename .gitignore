@@ -739,4 +739,6 @@ ASALocalRun/
 #GimpProjects
 *.xcf
 
+#vscode 
+.vscode
 # End of https://www.gitignore.io/api/c,vim,c++,macos,linux,python,windows,visualstudio
