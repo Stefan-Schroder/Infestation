@@ -125,13 +125,13 @@ public class InfestationMain extends ApplicationAdapter {
 
 
 		//sprite initialize 
-		zombieText = new Texture("Sprites/zombie2.png");
+		zombieText = new Texture("sprites/zombie/zombieV2.png");
 		zombie = new Sprite(zombieText);
 
-		bloodText = new Texture("Sprites/blood.png");
+		bloodText = new Texture("sprites/zombie/blood.png");
 		blood = new Sprite(bloodText);
 		
-		houseText = new Texture("Sprites/house.png");
+		houseText = new Texture("sprites/buildings/house.png");
 		house = new Sprite(houseText);
 		house.setPosition((width - houseText.getWidth())/2, (height - houseText.getHeight())/2);
 		//end sprite
