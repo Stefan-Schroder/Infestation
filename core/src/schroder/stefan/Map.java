@@ -7,6 +7,7 @@ import com.badlogic.gdx.math.Vector2;
 public class Map{
 
     private static final float PI = 3.141592654f;
+
     private Random random = new Random();
     public int gridx;
     public int gridy;
@@ -45,87 +46,66 @@ public class Map{
     }
 
     private void createValueGrid(){
-        float [][] noiseGrid = new float[gridy][gridx]; 
+        /**
+         * generates map perlin noise algorithm
+         */
+        //constants
+        int octaveCount = 5;
+
+        //gen base
+        float [][] base = new float[gridy][gridx]; 
         for(int y=0; y<gridy; y++){
             for(int x=0; x<gridx; x++){
-                //valueGrid[y][x] = (int)(400/(Math.abs(gridx/2-x)+Math.abs(gridy/2-y)+0.001))+random.nextInt(2);
-                //valueGrid[y][x] = (int)random.nextInt(5);
-
-                //perlin noiseish
-                //valueGrid[y][x] = noise(x,y);
-                noiseGrid[y][x] = noise(x,y);
+                base[y][x] = random.nextFloat()*15;
             }
         }
-        noiseGrid = generatePerlinNoise(noiseGrid, 5);
 
-        for(int y=0; y<gridy; y++){
-            for(int x=0; x<gridx; x++){
-                //valueGrid[y][x] = (int)(400/(Math.abs(gridx/2-x)+Math.abs(gridy/2-y)+0.001))+random.nextInt(2);
-                //valueGrid[y][x] = (int)random.nextInt(5);
-
-                //perlin noiseish
-                //valueGrid[y][x] = noise(x,y);
-                valueGrid[y][x] = 5*(int)noiseGrid[y][x];
-            }
-        }
-    }
-
-    private float noise(int x, int y){
-        float noise = 0.0f;
-        Vector2 position = new Vector2(x,y);
-        noise = 10*(float) Math.sin(position.dot(12.9898f, 78.233f) * 43758.5453123f);
-        return random.nextFloat()*10;
-    }
-
-    public static float interpolate (float x0, float x1, float alpha) {
-        /**
-         * Not my code, pasted here to test
-         */
-        return x0 * (1 - alpha) + alpha * x1;
-    }
-
-    public static float[][] generateSmoothNoise (float[][] baseNoise, int octave) {
-        /**
-         * Not my code, pasted here to test
-         */
-		int width = baseNoise.length;
-		int height = baseNoise[0].length;
-		float[][] smoothNoise = new float[width][height];
-
-		int samplePeriod = 1 << octave; // calculates 2 ^ k
-		float sampleFrequency = 1.0f / samplePeriod;
-		for (int i = 0; i < width; i++) {
-			int sample_i0 = (i / samplePeriod) * samplePeriod;
-			int sample_i1 = (sample_i0 + samplePeriod) % width; // wrap around
-			float horizontal_blend = (i - sample_i0) * sampleFrequency;
-
-			for (int j = 0; j < height; j++) {
-				int sample_j0 = (j / samplePeriod) * samplePeriod;
-				int sample_j1 = (sample_j0 + samplePeriod) % height; // wrap around
-				float vertical_blend = (j - sample_j0) * sampleFrequency;
-				float top = interpolate(baseNoise[sample_i0][sample_j0], baseNoise[sample_i1][sample_j0], horizontal_blend);
-				float bottom = interpolate(baseNoise[sample_i0][sample_j1], baseNoise[sample_i1][sample_j1], horizontal_blend);
-				smoothNoise[i][j] = interpolate(top, bottom, vertical_blend);
-			}
-		}
-
-		return smoothNoise;
-    }
-
-    public static float[][] generatePerlinNoise (float[][] baseNoise, int octaveCount) {
-        /**
-         * Not my code, pasted here to test
-         */
-		int width = baseNoise.length;
-		int height = baseNoise[0].length;
-		float[][][] smoothNoise = new float[octaveCount][][]; // an array of 2D arrays containing
+		float[][][] smoothNoise = new float[octaveCount][][];
 		float persistance = 0.7f;
 
 		for (int i = 0; i < octaveCount; i++) {
-			smoothNoise[i] = generateSmoothNoise(baseNoise, i);
+            //smooth
+            float[][] softNoise = new float[gridy][gridx];
+
+            int samplePeriod = 1 << octaveCount*3/5; //quick pow 2 
+            float sampleFrequency = 1.0f / samplePeriod;
+
+            for (int y = 0; y < gridy; y++) {
+
+                int sampleY0 = (y / samplePeriod) * samplePeriod;
+                int sampleY1 = (sampleY0 + samplePeriod) % gridy; //wrap edges
+
+                float vertBlend = (y - sampleY0) * sampleFrequency;
+
+                for (int x = 0; x < gridx; x++) {
+                    int sampleX0 = (x / samplePeriod) * samplePeriod;
+                    int sampleX1 = (sampleX0 + samplePeriod) % gridx; // wrap around
+                    float horiBlend = (x - sampleX0) * sampleFrequency;
+
+                    float top = interp(
+                        base[sampleY0][sampleX0], 
+                        base[sampleY1][sampleX0], 
+                        vertBlend
+                    );
+
+                    float bottom = interp(
+                        base[sampleY0][sampleX1], 
+                        base[sampleY1][sampleX1], 
+                        vertBlend
+                    );
+
+                    softNoise[y][x] = interp(
+                        top, 
+                        bottom, 
+                        horiBlend
+                    );
+                }
+            }
+
+            smoothNoise[i] = softNoise;
 		}
 
-		float[][] perlinNoise = new float[width][height]; // an array of floats initialised to 0
+		float[][] perlinNoise = new float[gridy][gridx];
 
 		float amplitude = 1.0f;
 		float totalAmplitude = 0.0f;
@@ -134,20 +114,23 @@ public class Map{
 			amplitude *= persistance;
 			totalAmplitude += amplitude;
 
-			for (int i = 0; i < width; i++) {
-				for (int j = 0; j < height; j++) {
-					perlinNoise[i][j] += smoothNoise[octave][i][j] * amplitude;
+			for (int y = 0; y < gridy; y++) {
+				for (int x = 0; x < gridx; x++) {
+					perlinNoise[y][x] += smoothNoise[octave][y][x] * amplitude;
 				}
 			}
 		}
 
-		for (int i = 0; i < width; i++) {
-			for (int j = 0; j < height; j++) {
-				perlinNoise[i][j] /= totalAmplitude;
+		for (int y = 0; y < gridy; y++) {
+			for (int x = 0; x < gridx; x++) {
+				valueGrid[y][x] = 5*(int)(perlinNoise[y][x]/totalAmplitude);
 			}
 		}
+    }
 
-		return perlinNoise;
+
+    public static float interp(float firstX, float nextX, float alpha) {
+        return firstX * (1 - alpha) + alpha * nextX;
     }
 
     private void integrateValueGrid(){
@@ -211,5 +194,4 @@ public class Map{
         }
         integrateValueGrid();
     }
-
 }
