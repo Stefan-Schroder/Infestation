@@ -44,6 +44,11 @@ Thus far, the main features included are:
         * No sound
         * No clear weapon indication
 
+Less obvious
+* Quad tree particle manager
+* Zombie texture 'animation'
+* Particle motor behaviour (AI)
+
 ## How to play
 
 Currently the game is in early development, so only basic features are available.
@@ -52,3 +57,7 @@ The weapon system can be cylced through with tab, and is indecated on the bottom
 * 1: turret
 * 2: large bomb
 * 3: cluster bomb
+
+### Controls:
+LMB will drop a bomb, or shoot turret at currently pointed location.
+TAB will cycle through the currently selected weapon
