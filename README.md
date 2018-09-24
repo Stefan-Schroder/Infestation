@@ -7,14 +7,14 @@ Zombie "tower defence" game made for CSC2003 assignment.
 To run this, go into the base folder.
 
 Windows:
-'''
+```
 gradlew.bat desktop:run
-'''
+```
 
 Linux:
-'''
+```
 ./gradlew desktop:run
-'''
+```
 
 ### Prerequisites
 
