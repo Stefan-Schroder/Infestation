@@ -11,6 +11,7 @@ import schroder.stefan.collision.ParticleQuadTree;
 import schroder.stefan.collision.Boundary;
 import schroder.stefan.WeaponDamage;
 import schroder.stefan.Map;
+import schroder.stefan.objects.Vehicle;
 
 public class ParticleController extends Thread{
     private final int width;
@@ -34,6 +35,8 @@ public class ParticleController extends Thread{
 
     private Map map;
 
+    public Vehicle currentCar;
+
     public ParticleController(int width, int height, Map map){
         this.width = width;
         this.height = height;
@@ -47,11 +50,14 @@ public class ParticleController extends Thread{
         running = true;
         random = new Random();
 
+        this.currentCar = null;
+
     }
 
     public void run(){
         while(running){
 
+            //#region conditional wait
             while(System.nanoTime()-currentTime<=10){
                 try {
                     Thread.sleep(10);
@@ -59,11 +65,17 @@ public class ParticleController extends Thread{
                     e.printStackTrace();
                 }
             }
+            //#endregion
 
             deltaTime = DeltaTime();
             currentTime = System.nanoTime();
 
+            //#region updateCar
+            if(currentCar!=null)
+                currentCar.update(deltaTime);
+            //#endregion
 
+            //#region kill dead particles
             Iterator liveIter = liveParticle.iterator();
             while(liveIter.hasNext()){
 
@@ -76,8 +88,9 @@ public class ParticleController extends Thread{
 
                 }
             }
+            //#endregion
 
-            //Stack<Vector2> pushPointClone = (Stack<Vector2>) damage.clone();
+            //#region process damage
             int initailSize = damage.size();
 
             for(int i=0; i<initailSize; i++){
@@ -112,17 +125,23 @@ public class ParticleController extends Thread{
                     if(currentDamage.gun!=0) map.addHole(currentDamage.position, currentDamage.size);
                 }
             }
+            //#endregion
 
+            //#region reinsert all living particles into Qtree
             liveParticleQuad = new ParticleQuadTree(new Boundary(new Vector2(0,0), width, height), 4);
             for(ZombieParticle parts : liveParticle){
                 liveParticleQuad.insert(parts);
             }
+            //#endregion
 
+            //#region update particles
             liveParticle.parallelStream().forEach(onePart -> {
 
                 LinkedList<ZombieParticle> closeParts = new LinkedList<ZombieParticle>();
                 liveParticleQuad.query(onePart.getPosition(), 10, closeParts);
-                onePart.seek(new Vector2(width/2,height/2),0.5f );
+                //onePart.seek(new Vector2(width/2,height/2),0.5f );
+                if(currentCar!=null)
+                    onePart.seek(currentCar.getPosition(), 0.5f);
                 onePart.separate(closeParts, 5);
                 onePart.align(closeParts, 1);
                 onePart.cohesion(closeParts, 0.5f);
@@ -131,6 +150,7 @@ public class ParticleController extends Thread{
                 onePart.update(deltaTime);
 
             });
+            //#endregion
 
             birthParticles();
 

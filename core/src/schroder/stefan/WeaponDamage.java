@@ -9,10 +9,11 @@ public class WeaponDamage{
     public float force;
     public float killZone;
     public int gun;
+    public boolean triggered;
 
     public WeaponDamage(Vector2 position, long time, float size, float force, float killZone, int gun){
         /**
-         * GUN: 0=Turret 1=Bomb 2=Cluster
+         * GUN: 1=Turret 1=Bomb 2=Cluster
          */
         this.position = position;
         this.time = time;
@@ -20,6 +21,7 @@ public class WeaponDamage{
         this.force = force;
         this.killZone = killZone;
         this.gun = gun;
+        triggered = false;
     }
 
     public boolean isTime(long currentTime){

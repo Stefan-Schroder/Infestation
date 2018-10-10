@@ -53,7 +53,7 @@ public class Map{
         int octaveCount = 5;
 
         //gen base
-        float [][] base = new float[gridy][gridx]; 
+        float [][] base = new float[gridy][gridx];
         for(int y=0; y<gridy; y++){
             for(int x=0; x<gridx; x++){
                 base[y][x] = random.nextFloat()*15;
@@ -67,7 +67,7 @@ public class Map{
             //smooth
             float[][] softNoise = new float[gridy][gridx];
 
-            int samplePeriod = 1 << octaveCount*3/5; //quick pow 2 
+            int samplePeriod = 1 << octaveCount*3/5; //quick pow 2
             float sampleFrequency = 1.0f / samplePeriod;
 
             for (int y = 0; y < gridy; y++) {
@@ -83,20 +83,20 @@ public class Map{
                     float horiBlend = (x - sampleX0) * sampleFrequency;
 
                     float top = interp(
-                        base[sampleY0][sampleX0], 
-                        base[sampleY1][sampleX0], 
+                        base[sampleY0][sampleX0],
+                        base[sampleY1][sampleX0],
                         vertBlend
                     );
 
                     float bottom = interp(
-                        base[sampleY0][sampleX1], 
-                        base[sampleY1][sampleX1], 
+                        base[sampleY0][sampleX1],
+                        base[sampleY1][sampleX1],
                         vertBlend
                     );
 
                     softNoise[y][x] = interp(
-                        top, 
-                        bottom, 
+                        top,
+                        bottom,
                         horiBlend
                     );
                 }
@@ -123,7 +123,7 @@ public class Map{
 
 		for (int y = 0; y < gridy; y++) {
 			for (int x = 0; x < gridx; x++) {
-				valueGrid[y][x] = 5*(int)(perlinNoise[y][x]/totalAmplitude);
+				valueGrid[y][x] = 2*(int)(perlinNoise[y][x]/totalAmplitude);
 			}
 		}
     }
@@ -193,5 +193,9 @@ public class Map{
             }
         }
         integrateValueGrid();
+    }
+
+    public Vector2 getCenterPosition(){
+        return new Vector2((gridx*xscale)/2, (gridy*yscale)/2);
     }
 }

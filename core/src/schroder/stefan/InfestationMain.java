@@ -20,6 +20,7 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.GdxRuntimeException;
 import com.badlogic.gdx.utils.TimeUtils;
 
+import schroder.stefan.objects.Vehicle;
 //other classes
 import schroder.stefan.particle.ParticleController;
 import schroder.stefan.particle.ZombieParticle;;
@@ -43,7 +44,7 @@ public class InfestationMain extends ApplicationAdapter {
 
 	private FrameBuffer frameBuffer;
 
-	private String vertexShader;  
+	private String vertexShader;
 	private String fragmentShader;
 	private ShaderProgram shader;
 
@@ -55,6 +56,9 @@ public class InfestationMain extends ApplicationAdapter {
 
 	private Texture houseText;
 	private Sprite house;
+
+	private Texture carText;
+	private Sprite car;
 
 	private Sprite screen;
 
@@ -71,6 +75,8 @@ public class InfestationMain extends ApplicationAdapter {
 	private Map map;
 
 	private long lastZombieTime;
+
+	private long lastCarSpawn;
 
 	@Override
 	public void create () {
@@ -107,7 +113,7 @@ public class InfestationMain extends ApplicationAdapter {
 		zombiePool.start();
 
 
-		//shader initialize
+		//#region shader initialize
 		frameBuffer = new FrameBuffer(Format.RGBA8888, width, height, true);
 
 		fragmentShader = Gdx.files.internal("shaders/fragment/using/droneCamera.glsl").readString();
@@ -121,23 +127,26 @@ public class InfestationMain extends ApplicationAdapter {
 		}
 
 		shadedBatch = new SpriteBatch(10, shader);
-		//end shader
+		//#endregion
 
 
-		//sprite initialize 
+		//#region sprite initialize
 		zombieText = new Texture("sprites/zombie/zombieV2.png");
 		zombie = new Sprite(zombieText);
 
 		bloodText = new Texture("sprites/zombie/blood.png");
 		blood = new Sprite(bloodText);
-		
+
 		houseText = new Texture("sprites/buildings/house.png");
 		house = new Sprite(houseText);
 		house.setPosition((width - houseText.getWidth())/2, (height - houseText.getHeight())/2);
-		//end sprite
+
+		carText = new Texture("sprites/vehicle/4by4.png");
+		car = new Sprite(carText);
+		//#endregion
 
 
-		//Initialize Constants
+		//#region Initialize Constants
 		//gun
 		gunMode = 0;
 		lastCarpetDrop = 0;
@@ -145,12 +154,14 @@ public class InfestationMain extends ApplicationAdapter {
 
 		//other
 		lastZombieTime = 0;
+		lastCarSpawn = TimeUtils.millis()+10000;
+		//#endregion
 
 	}
 
 	@Override
 	public void render () {
-		//render buffer
+		//#region render buffer creation
 		frameBuffer.begin();
 
 		Gdx.gl.glClearColor(1.1f, 0.1f, 0.1f, 1);
@@ -162,9 +173,9 @@ public class InfestationMain extends ApplicationAdapter {
 		for(int y=0; y<gridY; y++){
 			for(int x=0; x<gridX; x++){
 				shapeRenderer.setColor(
-					Float.valueOf(valueGrid[y][x])/200,
-					Float.valueOf(valueGrid[y][x])/200, 
-					Float.valueOf(valueGrid[y][x])/200,
+					(30+Float.valueOf(valueGrid[y][x]))/255,
+					(30+Float.valueOf(valueGrid[y][x]))/255,
+					(30+Float.valueOf(valueGrid[y][x]))/255,
 					1
 				);
 				shapeRenderer.rect(x*xscale,y*yscale,xscale,yscale);
@@ -198,12 +209,17 @@ public class InfestationMain extends ApplicationAdapter {
 		//rendering buildings
 		house.draw(batch);
 
+		//rending car
+		if(zombiePool.currentCar!=null)
+			zombiePool.currentCar.draw(batch);
+
 		batch.end();
 
 		frameBuffer.end();
-		//end frame buffer
+		//#endregion frame buffer
 
-		
+
+		//region render objects
 		//clear view
 		Gdx.gl.glClearColor(0.1f, 0.1f, 0.1f, 1);
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
@@ -242,12 +258,14 @@ public class InfestationMain extends ApplicationAdapter {
 
 		batch.end();
 		//end UI
+		//#endregion
 
-		
+
+		//checks if keys are pressed
 		buttonCheck();
-		
 
-		//spawn zombies
+
+		//#region spawn zombies
 		if(TimeUtils.millis()-lastZombieTime>10000+random.nextInt(10000)){
 			Vector2 position;
 			switch(random.nextInt(3)){
@@ -270,6 +288,29 @@ public class InfestationMain extends ApplicationAdapter {
 			}
 			lastZombieTime = TimeUtils.millis();
 		}
+		//#endregion
+
+		//#region spawn cars
+		if(TimeUtils.millis()-lastCarSpawn>10000){
+			Vector2 position;
+			switch(random.nextInt(3)){
+				case 0:
+					position = new Vector2(random.nextInt(width), 10);
+					break;
+				case 1:
+					position = new Vector2(random.nextInt(width), height-10);
+					break;
+				case 2:
+					position = new Vector2(10, random.nextInt(height));
+					break;
+				default:
+					position = new Vector2(width-10, random.nextInt(height));
+			}
+
+			zombiePool.currentCar = new Vehicle(position, map);
+			lastCarSpawn = TimeUtils.millis();
+		}
+		//#endregion
 	}
 
 	private void buttonCheck(){

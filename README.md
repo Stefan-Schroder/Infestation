@@ -1,4 +1,5 @@
 # Infestation
+### Stefan Schroder SCHSTE054
 
 Zombie "tower defence" game made for CSC2003 assignment.
 
