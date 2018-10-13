@@ -15,7 +15,9 @@
     "gradle.properties": true,
     ".settings": true,
     "build.gradle": true,
-    "settings.gradle": true
+    "settings.gradle": true,
+    "core/assets/sprites/vehicle/*FourxFour": true,
+    "core/assets/sprites/vehicle/*FourxFour.*": true
   },
   "java.configuration.updateBuildConfiguration": "interactive"
 }

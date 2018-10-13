@@ -17,6 +17,7 @@ import com.badlogic.gdx.graphics.glutils.FrameBuffer;
 import com.badlogic.gdx.graphics.glutils.ShaderProgram;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.GdxRuntimeException;
 import com.badlogic.gdx.utils.TimeUtils;
 
@@ -56,9 +57,6 @@ public class InfestationMain extends ApplicationAdapter {
 
 	private Texture houseText;
 	private Sprite house;
-
-	private Texture carText;
-	private Sprite car;
 
 	private Sprite screen;
 
@@ -140,9 +138,6 @@ public class InfestationMain extends ApplicationAdapter {
 		houseText = new Texture("sprites/buildings/house.png");
 		house = new Sprite(houseText);
 		house.setPosition((width - houseText.getWidth())/2, (height - houseText.getHeight())/2);
-
-		carText = new Texture("sprites/vehicle/4by4.png");
-		car = new Sprite(carText);
 		//#endregion
 
 
@@ -154,13 +149,17 @@ public class InfestationMain extends ApplicationAdapter {
 
 		//other
 		lastZombieTime = 0;
-		lastCarSpawn = TimeUtils.millis()+10000;
+		lastCarSpawn = TimeUtils.millis()+100;
 		//#endregion
 
+		//testing
+		//map.AStarInit();
+		zombiePool.currentCar = new Vehicle(new Vector2(xscale*190, yscale*90), map, false);
 	}
 
 	@Override
 	public void render () {
+		// map.AStar(new Vector2(xscale*190, yscale*90));
 		//#region render buffer creation
 		frameBuffer.begin();
 
@@ -210,7 +209,7 @@ public class InfestationMain extends ApplicationAdapter {
 		house.draw(batch);
 
 		//rending car
-		if(zombiePool.currentCar!=null)
+		if(zombiePool.currentCar!=null && zombiePool.currentCar.isReady())
 			zombiePool.currentCar.draw(batch);
 
 		batch.end();
@@ -291,7 +290,7 @@ public class InfestationMain extends ApplicationAdapter {
 		//#endregion
 
 		//#region spawn cars
-		if(TimeUtils.millis()-lastCarSpawn>10000){
+		if(TimeUtils.millis()-lastCarSpawn>1000 && zombiePool.currentCar!=null && zombiePool.currentCar.isComplete()){
 			Vector2 position;
 			switch(random.nextInt(3)){
 				case 0:
@@ -307,7 +306,7 @@ public class InfestationMain extends ApplicationAdapter {
 					position = new Vector2(width-10, random.nextInt(height));
 			}
 
-			zombiePool.currentCar = new Vehicle(position, map);
+			zombiePool.currentCar = new Vehicle(position, map, false);
 			lastCarSpawn = TimeUtils.millis();
 		}
 		//#endregion

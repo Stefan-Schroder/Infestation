@@ -1,12 +1,12 @@
 package schroder.stefan;
 
 import java.util.Random;
+import java.util.Stack;
 
 import com.badlogic.gdx.math.Vector2;
+import java.util.LinkedList;
 
 public class Map{
-
-    private static final float PI = 3.141592654f;
 
     private Random random = new Random();
     public int gridx;
@@ -17,6 +17,20 @@ public class Map{
 
     public int[][] valueGrid;
     public Vector2[][] directionGrid;
+
+    //ASTAR
+    private Vector2 end;
+    private int[] goal;
+    private int[] start;
+
+    private LinkedList<int[]> openList;
+    private LinkedList<int[]> closedList;
+
+    private float [][] gscore;
+    private float [][] fscore;
+    private int [][][] cameFrom;
+
+    private Stack<int[]> currentPath;
 
     public Map(int gridx, int gridy, int xscale, int yscale){
         this.gridx = gridx;
@@ -197,5 +211,135 @@ public class Map{
 
     public Vector2 getCenterPosition(){
         return new Vector2((gridx*xscale)/2, (gridy*yscale)/2);
+    }
+
+    public float heuristicPath(Vector2 start, Vector2 end){
+        return start.sub(end).len();
+        // return end.sub(start).scl(1/scale).len();
+    }
+
+    public Stack<int[]> reconstruct(int[][][] cameFrom, int[] start, int[] end){
+        /*
+        for(int y=0; y<cameFrom.length; y++){
+            for(int x=0; x<cameFrom[y].length; x++){
+                if(!(cameFrom[y][x][0]==0 && cameFrom[y][x][1]==0)){
+                    valueGrid[y][x] = -100;
+                }
+            }
+        }
+        */
+
+        int[] current = end.clone();
+        while(current[0]!=start[0] || current[1]!=start[1]){
+            valueGrid[current[0]][current[1]] = 1000;
+            current=cameFrom[current[0]][current[1]];
+            currentPath.add(current);
+        }
+        return currentPath;
+
+    }
+
+    public void AStarInit(Vector2 startPoint){
+        currentPath = new Stack<int[]>();
+        end = getCenterPosition();
+        goal = new int[]{(int)end.y/yscale, (int)end.x/xscale};
+        start = new int[]{(int)startPoint.y/yscale, (int)startPoint.x/xscale};
+
+        //open and closed list
+        openList = new LinkedList<int[]>();
+        closedList = new LinkedList<int[]>();
+
+        gscore = new float[gridy][gridx];
+        fscore = new float[gridy][gridx];
+        cameFrom = new int[gridy][gridx][2];
+
+        for(int y=0; y<gridy; y++){
+            for(int x=0; x<gridx; x++){
+                gscore[y][x] = Float.MAX_VALUE; //~max value
+                fscore[y][x] = Float.MAX_VALUE; //~max value
+                cameFrom[y][x] = new int[]{0,0};
+            }
+        }
+
+        //reset current position g score
+        gscore[start[0]][start[1]] = 0;
+
+        //start fscore
+        fscore[start[0]][start[1]] = heuristicPath(startPoint, end);
+
+        openList.add(start);
+
+    }
+
+    public Stack<int[]> AStar(Vector2 startPoint){
+
+        if(!openList.isEmpty()){
+            System.out.println(openList.size());
+
+            //getting the point with the lowest F scrore
+            int[] current = openList.peek();
+            float lowestF = fscore[current[0]][current[1]];
+            for(int[] aPlace :  openList){
+                if(fscore[aPlace[0]][aPlace[1]]<lowestF){
+                    //System.out.println("switch");
+                    lowestF = fscore[aPlace[0]][aPlace[1]];
+                    current = aPlace;
+                }
+            }
+
+            System.out.println("y:"+current[0]+" x:"+current[1]);
+            if(current[0]==goal[0] && current[1]==goal[1]){
+                return reconstruct(cameFrom, start, goal);
+            }
+
+            if(!openList.remove(current)) System.out.println("opps");
+            closedList.add(current);
+
+            //getting neighbours
+            int starty = (current[0]-1<=0) ? 0 : current[0]-1;
+            int endy = (current[0]+1>=gridy) ? gridy-1 : current[0]+1;
+
+            int startx = (current[1]-1<=0) ? 0 : current[1]-1;
+            int endx = (current[1]+1>=gridx) ? gridx-1 : current[1]+1;
+
+            for(int y=starty; y<=endy; y++){
+                nextX:
+                for(int x=startx; x<=endx; x++){
+                    //System.out.println(x+" "+y);
+                    if(x==current[1] && y==current[0]) continue;
+
+                    int[] thisPoint = {y,x};
+
+                    for(int[] aPlace :  closedList){
+                        if(aPlace[0]==y && aPlace[1]==x) continue nextX;
+                    }
+
+                    Vector2 currentDirection = new Vector2(x-current[1], y-current[0]).nor();
+                    float withDirection = directionGrid[current[0]][current[1]].nor().add(currentDirection).len();
+                    float possableG = gscore[current[0]][current[1]] + 1 - withDirection*8;//(float)Math.sqrt(Math.pow(current[1]-x,2)+Math.pow(current[1]-y,2));//find better way to do this
+
+                    boolean alreadyIn = false;
+                    for(int[] aPlace : openList){
+                        if(aPlace[0]==y && aPlace[1]==x){
+                            alreadyIn = true;
+                            if(gscore[aPlace[0]][aPlace[1]]<=possableG) continue nextX;
+                        }
+                    }
+                    if(!alreadyIn) openList.add(thisPoint);
+
+
+                    cameFrom[thisPoint[0]][thisPoint[1]] = new int[]{current[0],current[1]};
+
+                    gscore[thisPoint[0]][thisPoint[1]] = possableG;
+                    fscore[thisPoint[0]][thisPoint[1]] = possableG + heuristicPath(new Vector2(x*xscale, y*yscale), end);
+                }
+            }
+
+            //valueGrid[current[0]][current[1]] = -100;
+            //openList.pop();
+
+        }
+        return null;
+
     }
 }
