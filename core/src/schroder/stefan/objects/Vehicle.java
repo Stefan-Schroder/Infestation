@@ -12,6 +12,7 @@ import schroder.stefan.Map;
 public class Vehicle{
     private Vector2 position;
     private Vector2 velocity;
+    private Vector2 direction;
 
     private Texture carText;
     private Sprite car;
@@ -23,8 +24,6 @@ public class Vehicle{
 
     private Stack<int[]> path;
 
-    //test
-    private int counter = 100000;
     private int[] nextPos;
 
     public Vehicle(Vector2 position, Map map, boolean ready){
@@ -32,27 +31,34 @@ public class Vehicle{
         this.position = new Vector2();
         this.position.x = position.x;
         this.position.y = position.y;
+
         this.map = map;
+
         this.velocity = new Vector2(0,0);
+        this.direction = new Vector2(0,0);
+
 		this.carText = new Texture("sprites/vehicle/4by4.png");
         this.car = new Sprite(carText);
         car.setOrigin(50, 50);
+
         this.ready = ready;
+        this.complete = false;
+
         map.AStarInit(position);
-        complete = false;
     }
 
     public void draw(Batch currentBatch){
+        direction.lerp(velocity, 0.2f);
         car.setPosition(position.x-50, position.y-50);
-        car.setRotation(velocity.angle());
-        car.setScale(0.5f, 0.5f);
+        car.setRotation(direction.angle());
+        car.setScale(0.4f, 0.4f);
         car.draw(currentBatch);
     }
 
     public void update(float dt){
-        if(!ready){
+        if(!ready && !complete){
             path = map.AStar(position);
-            if(path!=null){
+            if(path!=null && !complete){
                 ready = true;
             }
         }else{
@@ -60,26 +66,34 @@ public class Vehicle{
                 complete = true;
                 ready=false;
             }else{
-                if(counter>=1000){
+
+                if(nextPos==null){
                     nextPos = path.pop();
-                    counter = 0;
                 }
-                Vector2 oldPos = position.cpy();
-                position.lerp(new Vector2(nextPos[1]*map.xscale,nextPos[0]*map.yscale),0.001f);
-                counter++;
-                velocity.lerp(position.cpy().sub(oldPos),0.001f);
-                //System.out.println(counter);
+                Vector2 nextDes = new Vector2(nextPos[1]*map.xscale,nextPos[0]*map.yscale);
+                while(position.dst(nextDes)<15 && !path.isEmpty()){
+                    nextDes = new Vector2(nextPos[1]*map.xscale,nextPos[0]*map.yscale);
+                    nextPos = path.pop();
+                }
+
+                velocity = nextDes;
+                velocity.sub(position.cpy());
+                velocity.setLength(80);
+
+                Vector2 landDirection = map.directionGrid[nextPos[0]][nextPos[1]].cpy();
+                float scaler = landDirection.cpy().dot(velocity)/ ( velocity.len()*velocity.len());
+
+                Vector2 addedVelocity = velocity.cpy().scl(scaler);
+                addedVelocity.limit(30);
+                velocity.add(addedVelocity);
+
+                // velocity.clamp(40,100);
+
+                position.mulAdd(velocity, dt);
 
             }
 
         }
-        /*
-        velocity = new Vector2(map.getCenterPosition());
-        velocity.sub(position);
-        velocity.scl(0.3f);
-
-        position.mulAdd(velocity, dt);
-        */
     }
 
     public Vector2 getPosition(){

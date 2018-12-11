@@ -18,7 +18,9 @@ public class Map{
     public int[][] valueGrid;
     public Vector2[][] directionGrid;
 
-    //ASTAR
+    public int[][] buildingGrid;
+
+    //#region ASTAR
     private Vector2 end;
     private int[] goal;
     private int[] start;
@@ -31,6 +33,7 @@ public class Map{
     private int [][][] cameFrom;
 
     private Stack<int[]> currentPath;
+    //#endregion
 
     public Map(int gridx, int gridy, int xscale, int yscale){
         this.gridx = gridx;
@@ -40,8 +43,121 @@ public class Map{
 
         this.scale = (int)Math.sqrt(Math.pow(yscale,2) + Math.pow(xscale,2));
 
+        constructBuildings();
         generate();
     }
+
+    private void constructBuildings(){
+        buildingGrid = new int[gridy][gridx];
+        for(int y=0; y<gridy; y++){
+            for(int x=0; x<gridx; x++){
+                buildingGrid[y][x] = 0;
+            }
+        }
+
+        int paddingX = 20;
+        int paddingY = 10;
+        int stndX = 15;
+        int stndY = 10;
+        int roadSize = 5;
+
+        for(int y=paddingY; y<gridy-paddingY; y+=stndY+roadSize){
+            for(int x=paddingX; x<gridx-paddingX; x+=stndX+roadSize){
+                if(x+stndX+paddingX/2>gridx/2 && x < gridx/2 + paddingX/2)
+                    if(y+stndY+paddingY/2>gridy/2 && y < gridy/2 + paddingY/2) continue;
+
+                int extendRight = (random.nextInt(3)==2 && y+stndY+roadSize<gridy-paddingY) ? roadSize : 0;
+                int extendUp = (random.nextInt(3)==2 && x+stndX+roadSize<gridx-paddingX) ? roadSize : 0;
+                if(buildingGrid[y-1][x]==0 && buildingGrid[y][x-1]==0) if(random.nextBoolean()) continue;
+
+                for(int suby=y; suby<y+stndY+extendRight; suby++){
+                    for(int subx=x; subx<x+stndX+extendUp; subx++){
+                        if(suby>=y+stndY && subx>=x+stndX) continue;
+
+                        if(suby==y){
+                            buildingGrid[suby][subx] = 2; //y needs to point up
+                        }else if (suby==y+stndY+extendRight-1){
+                            buildingGrid[suby][subx] = 3; //y needs to point down
+                        }else if(subx==x){
+                            buildingGrid[suby][subx] = 4; //x needs to point down
+                        }else if(subx==x+stndX+extendUp-1){
+                            buildingGrid[suby][subx] = 5; //x needs to point up
+                        }else{
+                            buildingGrid[suby][subx] = 1;
+                        }
+                    }
+                }
+            }
+        }
+
+    }
+
+    public boolean isBlocked(Vector2 position){
+        int yCord = (int)(position.y/yscale);
+        int xCord = (int)(position.x/xscale);
+        yCord %= gridy;
+        xCord %= gridx;
+        yCord = Math.abs(yCord);
+        xCord = Math.abs(xCord);
+
+        return (buildingGrid[yCord][xCord]>0);
+    }
+
+    public Vector2 unblockMe(Vector2 currentPosition, Vector2 velocity, float deltaTime){
+        /*
+        if(direction==null) direction = new Vector2(scale,0);
+        else direction = direction.cpy().nor().scl(scale);
+
+        while(isBlocked(currentPosition)){
+            currentPosition.sub(direction);
+        }
+
+        return currentPosition;
+        */
+        //Vector2 nextPosition = currentPosition.cpy().mulAdd(velocity, deltaTime);
+        if(/*isBlocked(nextPosition) || */isBlocked(currentPosition)){
+            int yCord = (int)(currentPosition.y/yscale);
+            int xCord = (int)(currentPosition.x/xscale);
+            yCord %= gridy;
+            xCord %= gridx;
+            yCord = Math.abs(yCord);
+            xCord = Math.abs(xCord);
+            /*
+            nextPosition = currentPosition.cpy().mulAdd(new Vector2(velocity.x, 0), deltaTime);
+            if(isBlocked(nextPosition)){
+                nextPosition = currentPosition.cpy().mulAdd(new Vector2(0,velocity.y), deltaTime);
+                velocity.x*=-1;
+            }else{
+                velocity.y*=-1;
+            }
+            */
+
+            if(buildingGrid[yCord][xCord]==2){
+                velocity.y = -1*Math.abs(velocity.y);
+                currentPosition.y -= yscale;
+            }else if(buildingGrid[yCord][xCord]==3){
+                velocity.y = Math.abs(velocity.y);
+                currentPosition.y += yscale;
+            }else if(buildingGrid[yCord][xCord]==4){
+                velocity.x = -1*Math.abs(velocity.x);
+                currentPosition.x -= xscale;
+            }else if(buildingGrid[yCord][xCord]==5){
+                velocity.x = Math.abs(velocity.x);
+                currentPosition.x += xscale;
+            }else{
+                currentPosition.x = 0;
+                currentPosition.y = 0;
+            }
+
+            /*
+            velocity.x = 0;
+            velocity.y = 0;
+            */
+        }
+
+        return velocity;
+    }
+
 
     public int[][] getValueGrid(){
         return valueGrid;
@@ -64,7 +180,8 @@ public class Map{
          * generates map perlin noise algorithm
          */
         //constants
-        int octaveCount = 5;
+        // int octaveCount = 5;
+        int octaveCount = 6;
 
         //gen base
         float [][] base = new float[gridy][gridx];
@@ -82,6 +199,7 @@ public class Map{
             float[][] softNoise = new float[gridy][gridx];
 
             int samplePeriod = 1 << octaveCount*3/5; //quick pow 2
+            // int samplePeriod = 1 << octaveCount*3/4; //quick pow 2
             float sampleFrequency = 1.0f / samplePeriod;
 
             for (int y = 0; y < gridy; y++) {
@@ -137,7 +255,7 @@ public class Map{
 
 		for (int y = 0; y < gridy; y++) {
 			for (int x = 0; x < gridx; x++) {
-				valueGrid[y][x] = 2*(int)(perlinNoise[y][x]/totalAmplitude);
+				valueGrid[y][x] = 3*(int)(perlinNoise[y][x]/totalAmplitude)+5;
 			}
 		}
     }
@@ -194,6 +312,8 @@ public class Map{
                     else{
                         int suggested = (int) (base - (size - Math.sqrt(Math.pow(x - j, 2) + Math.pow(y - i, 2)))) + random.nextInt(5);
                         valueGrid[i][j] = (valueGrid[i][j]<suggested) ? valueGrid[i][j] : suggested;
+                        if(buildingGrid[i][j]==0) continue;
+                        buildingGrid[i][j] = -1;
                     }
                 }
                 for (int j = x+1; (j-x)*(j-x) + (i-y)*(i-y) <= size*size; j++) {
@@ -201,6 +321,8 @@ public class Map{
                     else{
                         int suggested = (int) (base - (size - Math.sqrt(Math.pow(x - j, 2) + Math.pow(y - i, 2)))) + random.nextInt(5);
                         valueGrid[i][j] = (valueGrid[i][j]<suggested) ? valueGrid[i][j] : suggested;
+                        if(buildingGrid[i][j]==0) continue;
+                        buildingGrid[i][j] = -1;
                     }
 
                 }
@@ -219,19 +341,9 @@ public class Map{
     }
 
     public Stack<int[]> reconstruct(int[][][] cameFrom, int[] start, int[] end){
-        /*
-        for(int y=0; y<cameFrom.length; y++){
-            for(int x=0; x<cameFrom[y].length; x++){
-                if(!(cameFrom[y][x][0]==0 && cameFrom[y][x][1]==0)){
-                    valueGrid[y][x] = -100;
-                }
-            }
-        }
-        */
-
         int[] current = end.clone();
         while(current[0]!=start[0] || current[1]!=start[1]){
-            valueGrid[current[0]][current[1]] = 1000;
+            // valueGrid[current[0]][current[1]] = 1000;
             current=cameFrom[current[0]][current[1]];
             currentPath.add(current);
         }
@@ -274,20 +386,19 @@ public class Map{
     public Stack<int[]> AStar(Vector2 startPoint){
 
         if(!openList.isEmpty()){
-            System.out.println(openList.size());
+            //System.out.println(openList.size());
 
             //getting the point with the lowest F scrore
             int[] current = openList.peek();
             float lowestF = fscore[current[0]][current[1]];
             for(int[] aPlace :  openList){
                 if(fscore[aPlace[0]][aPlace[1]]<lowestF){
-                    //System.out.println("switch");
                     lowestF = fscore[aPlace[0]][aPlace[1]];
                     current = aPlace;
                 }
             }
 
-            System.out.println("y:"+current[0]+" x:"+current[1]);
+            // System.out.println("y:"+current[0]+" x:"+current[1]);
             if(current[0]==goal[0] && current[1]==goal[1]){
                 return reconstruct(cameFrom, start, goal);
             }
@@ -306,7 +417,12 @@ public class Map{
                 nextX:
                 for(int x=startx; x<=endx; x++){
                     //System.out.println(x+" "+y);
-                    if(x==current[1] && y==current[0]) continue;
+                    if(x==current[1] && y==current[0]
+                        || buildingGrid[y][x]>0
+                        || buildingGrid[(y+2)%gridy][x]>0
+                        || buildingGrid[Math.abs(y-2)%gridy][x]>0
+                        || buildingGrid[y][Math.abs(x-2)%gridx]>0
+                        || buildingGrid[y][(x+2)%gridx]>0) continue;
 
                     int[] thisPoint = {y,x};
 
@@ -315,8 +431,12 @@ public class Map{
                     }
 
                     Vector2 currentDirection = new Vector2(x-current[1], y-current[0]).nor();
-                    float withDirection = directionGrid[current[0]][current[1]].nor().add(currentDirection).len();
-                    float possableG = gscore[current[0]][current[1]] + 1 - withDirection*8;//(float)Math.sqrt(Math.pow(current[1]-x,2)+Math.pow(current[1]-y,2));//find better way to do this
+                    Vector2 landDirection = directionGrid[current[0]][current[1]].cpy().setLength(0.4f);
+
+                    float scaler = landDirection.cpy().dot(currentDirection)/ ( currentDirection.len()*currentDirection.len());
+                    float withDirection = currentDirection.add(landDirection.scl(scaler)).len();
+
+                    float possableG = gscore[current[0]][current[1]] + withDirection*4 + (float)Math.sqrt(Math.pow(current[1]-x,2)+Math.pow(current[0]-y,2));//find better way to do this
 
                     boolean alreadyIn = false;
                     for(int[] aPlace : openList){
@@ -335,7 +455,7 @@ public class Map{
                 }
             }
 
-            //valueGrid[current[0]][current[1]] = -100;
+            // valueGrid[current[0]][current[1]] = -100;
             //openList.pop();
 
         }

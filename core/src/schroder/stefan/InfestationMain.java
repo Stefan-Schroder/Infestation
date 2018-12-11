@@ -6,6 +6,7 @@ import java.util.Random;
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Pixmap.Format;
@@ -17,7 +18,6 @@ import com.badlogic.gdx.graphics.glutils.FrameBuffer;
 import com.badlogic.gdx.graphics.glutils.ShaderProgram;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.GdxRuntimeException;
 import com.badlogic.gdx.utils.TimeUtils;
 
@@ -39,6 +39,7 @@ public class InfestationMain extends ApplicationAdapter {
 	private Random random;
 
 	private int[][] valueGrid;
+	private int[][] buildingGrid;
 
 	private int width;
 	private int height;
@@ -75,6 +76,8 @@ public class InfestationMain extends ApplicationAdapter {
 	private long lastZombieTime;
 
 	private long lastCarSpawn;
+
+	private float deltaTime;
 
 	@Override
 	public void create () {
@@ -154,11 +157,12 @@ public class InfestationMain extends ApplicationAdapter {
 
 		//testing
 		//map.AStarInit();
-		zombiePool.currentCar = new Vehicle(new Vector2(xscale*190, yscale*90), map, false);
+		//zombiePool.currentCar = new Vehicle(new Vector2(xscale*190, yscale*90), map, false);
 	}
 
 	@Override
 	public void render () {
+		deltaTime = Gdx.graphics.getDeltaTime();
 		// map.AStar(new Vector2(xscale*190, yscale*90));
 		//#region render buffer creation
 		frameBuffer.begin();
@@ -214,6 +218,46 @@ public class InfestationMain extends ApplicationAdapter {
 
 		batch.end();
 
+		/*
+		//render buildings
+		shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+		buildingGrid = map.buildingGrid.clone();
+		for(int y=0; y<gridY; y++){
+			for(int x=0; x<gridX; x++){
+				if(buildingGrid[y][x]==0) continue;
+				if(buildingGrid[y][x]==1)
+					shapeRenderer.setColor(0.7f,0.7f,0.7f,1f);
+				if(buildingGrid[y][x]==2)
+					shapeRenderer.setColor(0.9f,0.1f,0.1f,1f);
+				if(buildingGrid[y][x]==3)
+					shapeRenderer.setColor(0.1f,0.9f,0.1f,1f);
+				if(buildingGrid[y][x]==4)
+					shapeRenderer.setColor(0.1f,0.1f,0.9f,1f);
+				if(buildingGrid[y][x]==5)
+					shapeRenderer.setColor(0.9f,0.9f,0.1f,1f);
+				if(buildingGrid[y][x]==-1) continue;
+					// shapeRenderer.setColor(0.1f,0.1f,0.1f,0.3f);
+				shapeRenderer.rect(x*xscale,y*yscale,xscale,yscale);
+			}
+		}
+		shapeRenderer.end();
+		*/
+
+		batch.begin();
+		//#region animate explosions
+		int initialSize = zombiePool.toBeAnimated.size();
+		for(int i=0; i<initialSize; i++){
+			WeaponDamage damage = zombiePool.toBeAnimated.poll();
+			if(!damage.isCompleted()){
+				damage.draw(batch, deltaTime);
+				zombiePool.toBeAnimated.add(damage);
+			}else{
+				damage.dispose();
+			}
+		}
+		//#endregion
+		batch.end();
+
 		frameBuffer.end();
 		//#endregion frame buffer
 
@@ -247,7 +291,6 @@ public class InfestationMain extends ApplicationAdapter {
 		shadedBatch.end();
 		//end shaded batch
 
-
 		//render UI
 		batch.begin();
 
@@ -263,24 +306,24 @@ public class InfestationMain extends ApplicationAdapter {
 		//checks if keys are pressed
 		buttonCheck();
 
-
 		//#region spawn zombies
-		if(TimeUtils.millis()-lastZombieTime>10000+random.nextInt(10000)){
+		// if(TimeUtils.millis()-lastZombieTime>10000+random.nextInt(10000)){
+		if(TimeUtils.millis()-lastZombieTime>50+random.nextInt(1000)){
 			Vector2 position;
 			switch(random.nextInt(3)){
 				case 0:
-					position = new Vector2(random.nextInt(width), 10);
+					position = new Vector2(random.nextInt(width), 0);
 					break;
 				case 1:
-					position = new Vector2(random.nextInt(width), height-10);
+					position = new Vector2(random.nextInt(width), height-0);
 					break;
 				case 2:
-					position = new Vector2(10, random.nextInt(height));
+					position = new Vector2(0, random.nextInt(height));
 					break;
 				default:
-					position = new Vector2(width-10, random.nextInt(height));
+					position = new Vector2(width-0, random.nextInt(height));
 			}
-			for(int i=0; i<100; i+= 1) {
+			for(int i=0; i<100+random.nextInt(50); i+= 1) {
 				Vector2 displacement = new Vector2(i + random.nextFloat()*100, random.nextFloat()*100 - i);
 				displacement.add(position);
 				zombiePool.createParticle(displacement);
@@ -290,7 +333,7 @@ public class InfestationMain extends ApplicationAdapter {
 		//#endregion
 
 		//#region spawn cars
-		if(TimeUtils.millis()-lastCarSpawn>1000 && zombiePool.currentCar!=null && zombiePool.currentCar.isComplete()){
+		if(TimeUtils.millis()-lastCarSpawn>10000 && (zombiePool.currentCar!=null && zombiePool.currentCar.isComplete() || zombiePool.currentCar==null)){
 			Vector2 position;
 			switch(random.nextInt(3)){
 				case 0:
@@ -306,6 +349,7 @@ public class InfestationMain extends ApplicationAdapter {
 					position = new Vector2(width-10, random.nextInt(height));
 			}
 
+			if(map.isBlocked(position)) return;
 			zombiePool.currentCar = new Vehicle(position, map, false);
 			lastCarSpawn = TimeUtils.millis();
 		}
@@ -332,31 +376,32 @@ public class InfestationMain extends ApplicationAdapter {
 			switch(gunMode){
 				case 1:
 					//bomb
-					if(TimeUtils.nanoTime() - lastBombDrop<10*Math.pow(10,9)){
+					if(TimeUtils.nanoTime() - lastBombDrop<1*Math.pow(10,9)){
 						addDamage = false;
 						break;
 					}
 					dropTime += Math.pow(10, 9);
-					damageSize = 200;
+					// damageSize = 200;
+					damageSize = 80;
 					damageForce = 1000;
-					killZone = 100;
+					killZone = 60;
 					lastBombDrop = TimeUtils.nanoTime();
 					break;
 				case 2:
 					//carpet
-					if(TimeUtils.nanoTime() - lastCarpetDrop<50*Math.pow(10,6)){
+					if(TimeUtils.nanoTime() - lastCarpetDrop<100*Math.pow(10,6)){
 						addDamage = false;
 						break;
 					}
-					dropTime += Math.pow(10, 9);
-					damageSize = 60;
+					dropTime += 0.5*Math.pow(10, 9);
+					damageSize = 50;
 					damageForce = 1000;
-					killZone = 40;
+					killZone = 35;
 					lastCarpetDrop = TimeUtils.nanoTime();
 					break;
 				default:
 					//gun
-					dropTime = 0;
+					dropTime += 1000000;
 					damageSize = 10;
 					damageForce = 200;
 					killZone = 10;

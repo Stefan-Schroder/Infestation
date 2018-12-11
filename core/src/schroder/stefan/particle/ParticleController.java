@@ -30,6 +30,7 @@ public class ParticleController extends Thread{
     public long runCount;
 
     public ConcurrentLinkedQueue<WeaponDamage> damage;
+    public ConcurrentLinkedQueue<WeaponDamage> toBeAnimated;
 
     private Random random;
 
@@ -46,6 +47,7 @@ public class ParticleController extends Thread{
         unbornParticles = new ConcurrentLinkedQueue<ZombieParticle>();
 
         damage = new ConcurrentLinkedQueue<WeaponDamage>();
+        toBeAnimated = new ConcurrentLinkedQueue<WeaponDamage>();
 
         running = true;
         random = new Random();
@@ -122,7 +124,11 @@ public class ParticleController extends Thread{
                     }
 
                     //make crater
-                    if(currentDamage.gun!=0) map.addHole(currentDamage.position, currentDamage.size);
+                    if(currentDamage.gun!=0){
+                        map.addHole(currentDamage.position, currentDamage.size);
+                    }
+                    //currentDamage.playSound();
+                    toBeAnimated.add(currentDamage);
                 }
             }
             //#endregion
@@ -139,14 +145,16 @@ public class ParticleController extends Thread{
 
                 LinkedList<ZombieParticle> closeParts = new LinkedList<ZombieParticle>();
                 liveParticleQuad.query(onePart.getPosition(), 10, closeParts);
-                //onePart.seek(new Vector2(width/2,height/2),0.5f );
-                if(currentCar!=null)
-                    onePart.seek(currentCar.getPosition(), 0.5f);
-                onePart.separate(closeParts, 5);
+                onePart.seek(new Vector2(width/2,height/2),0.8f );
+                /*
+                if(currentCar!=null && currentCar.isReady())
+                    onePart.seek(currentCar.getPosition(), 0.8f);
+                */
+                onePart.separate(closeParts, 8);
                 onePart.align(closeParts, 1);
                 onePart.cohesion(closeParts, 0.5f);
                 //onePart.flock(liveParticle, 3,1,0.5f);
-                onePart.follow(2);
+                onePart.follow(1.5f);
                 onePart.update(deltaTime);
 
             });

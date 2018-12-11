@@ -11,6 +11,7 @@ public class ZombieParticle{
     private final int height;
     private final int width;
     private Vector2 position;
+    private Vector2 desiredPosition;
     private Vector2 velocity;
     private Vector2 acceleration;
 
@@ -29,11 +30,13 @@ public class ZombieParticle{
 
     public void reset(Vector2 position){
         this.position = position;
+        this.desiredPosition = position.cpy();
         this.velocity = new Vector2(0,0);
         this.acceleration = new Vector2(0,0);
-        this.life = 20;
-        this.maxSpeed = 100;
-        this.maxForce = 200;
+        this.life = 30;
+        this.maxSpeed = 130;
+        this.maxForce = 240;
+        // this.maxForce = 200;
     }
 
     public Vector2 getPosition(){
@@ -45,6 +48,7 @@ public class ZombieParticle{
     }
 
     public void update(float deltaTime){
+        /*
         if(position.x<0) {
             position.x = width-10;
         }else if(position.x>width-10){
@@ -53,13 +57,18 @@ public class ZombieParticle{
             position.y = height-10;
         }else if(position.y>height-10) {
             position.y = 0;
-        }if (position.x>=width/2-5 && position.x<=width/2+5 && position.y>=height/2-5 && position.y<=height/2+5){
+        }
+        */
+        if (position.x>=width/2-5 && position.x<=width/2+5 && position.y>=height/2-5 && position.y<=height/2+5){
             life = -1;
             return;
         }
 
         velocity.mulAdd(acceleration, deltaTime);
         velocity.limit(maxSpeed);
+
+        velocity = map.unblockMe(position, velocity, deltaTime);
+        //desiredPosition.mulAdd(velocity, deltaTime);
 
         position.mulAdd(velocity, deltaTime);
 
@@ -91,7 +100,7 @@ public class ZombieParticle{
         if(xposition<0) xposition = 0;
         if(yposition>=map.gridy) yposition = map.gridy-1;
         if(yposition<0) yposition = 0;
-        
+
         Vector2 desired = vmap[yposition][xposition];
         desired.setLength(maxSpeed);
 
